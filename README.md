@@ -1,6 +1,6 @@
 # ADV KeyBridge
 
-**For Cardputer ADV.** 把有线键盘变成蓝牙键盘，也可以直接用 ADV 的内置键盘输入。
+**For Cardputer ADV.** 基于 ZMK 的 USB HID 转 BLE HID 键盘桥接固件，支持外接 USB 键盘与 ADV 内置键盘输入。
 
 ![ADV KeyBridge on Cardputer ADV](assets/cardputer-adv.jpg)
 
