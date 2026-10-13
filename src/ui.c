@@ -44,7 +44,8 @@ SETTINGS_STATIC_HANDLER_DEFINE_WITH_CPRIO(adv_ui_ready, "adv_ui", NULL, NULL,
 static int paint(const struct adv_ui_model *m) {
     if(!display_ok)return -ENODEV;
     if(m->screen.asleep){drawn=false;return 0;}
-    if(drawn && m->state==previous.state && m->profile==previous.profile &&
+    if(drawn && !memcmp(&m->pages,&previous.pages,sizeof(m->pages)) &&
+       m->pages_error==previous.pages_error && m->state==previous.state && m->profile==previous.profile &&
        m->occupied==previous.occupied && m->connected==previous.connected &&
        m->error==previous.error && m->usb==previous.usb &&
        m->usb_reports==previous.usb_reports && m->usb_media_reports==previous.usb_media_reports &&
@@ -56,7 +57,7 @@ static int paint(const struct adv_ui_model *m) {
        m->battery.drain_state==previous.battery.drain_state &&
        m->battery.drain_tenths_per_hour==previous.battery.drain_tenths_per_hour &&
        m->screen.page==previous.screen.page && m->screen.selected==previous.screen.selected &&
-       m->screen.brightness==previous.screen.brightness && m->screen_error==previous.screen_error &&
+       m->screen.brightness==previous.screen.brightness && m->screen.sleep_index==previous.screen.sleep_index && m->screen_error==previous.screen_error &&
        m->sd_log.state==previous.sd_log.state && m->sd_log.error==previous.sd_log.error &&
        m->sd_log.dropped==previous.sd_log.dropped &&
        m->previous_usb_stage==previous.previous_usb_stage)return 0;
@@ -140,7 +141,7 @@ static void button(int64_t now) {
                 zmk_ble_clear_bonds();confirm_until=0;atomic_clear(&ble_error);
             } else {
                 confirm_until=0;
-                int err=zmk_ble_prof_next();
+                int err=adv_pages_next();
                 if(err)atomic_set(&ble_error,err);
             }
         }
@@ -153,6 +154,7 @@ static void update(struct k_work *work) {
     adv_screen_tick();
     button(now);
     struct adv_ui_model m={0};
+    adv_pages_get(&m.pages);m.pages_error=adv_pages_error();
     m.uptime_seconds=(uint32_t)(now/1000);
     m.reset_reason=reset_reason;
     adv_battery_get_status(&m.battery);

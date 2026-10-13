@@ -61,7 +61,8 @@ int main(int argc,char **argv) {
         struct adv_ui_model m={.state=s,.profile=4,.occupied=0x13,.connected=0x10,.error=-19,
             .usb=usb,.usb_reports=0xffffffffu,.usb_media_reports=0xffffffffu,.usb_error=-12345,
             .battery={.valid=true,.millivolts=4200,.percent=100,.drain_state=s%5,.drain_tenths_per_hour=123},
-            .screen={.page=page,.selected=s%3,.brightness=s%2?10:100},.screen_error=-12345};
+            .pages={.enabled=11,.current=3},
+            .screen={.page=page,.selected=s%9,.brightness=s%2?10:100},.screen_error=-12345};
         uint8_t guarded[ADV_WIDTH*12*2+32];
         for(int y=0;y<ADV_HEIGHT;y+=12) {
             memset(guarded,0xa5,sizeof(guarded));
@@ -78,12 +79,13 @@ int main(int argc,char **argv) {
         for(int y=0;y<ADV_HEIGHT*2;y++)for(int panel=0;panel<3;panel++) {
             enum adv_state state=(y<ADV_HEIGHT?panel:panel+3);
             struct adv_ui_model m={.state=state,
+                .pages={.enabled=11,.current=state==ADV_CONNECTED?3:0},
                 .profile=1,.occupied=(state==ADV_PAIRING?1:3),
                 .connected=(state==ADV_CONNECTED?2:0),.error=-19,
                 .battery={.valid=state!=ADV_STARTING,.millivolts=state==ADV_ERROR?3500:4050,
                           .percent=state==ADV_ERROR?6:80,.drain_state=state==ADV_ERROR?ADV_DRAIN_FALLING:ADV_DRAIN_LEARNING,.drain_tenths_per_hour=87},
                 .screen={.page=state>=ADV_ERROR?ADV_PAGE_SETTINGS:ADV_PAGE_KEYBOARD,
-                         .selected=state==ADV_CONFIRM_CLEAR?1:0,.brightness=state==ADV_ERROR?50:100}};
+                         .selected=state==ADV_CONFIRM_CLEAR?8:1,.sleep_index=2,.brightness=state==ADV_ERROR?50:100}};
             adv_render_band(&m,y%ADV_HEIGHT,1,rowbuf);
             for(int x=0;x<ADV_WIDTH;x++) {
                 uint16_t c=(rowbuf[x*2]<<8)|rowbuf[x*2+1];

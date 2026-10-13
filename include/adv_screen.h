@@ -7,10 +7,12 @@
 enum adv_page { ADV_PAGE_KEYBOARD, ADV_PAGE_SETTINGS };
 struct adv_screen_state {
     enum adv_page page;
-    uint8_t selected, brightness;
+    uint8_t selected, brightness, sleep_index;
     bool asleep;
 };
-#define ADV_SCREEN_DEFAULT { .page=ADV_PAGE_KEYBOARD, .brightness=100 }
+#define ADV_SCREEN_DEFAULT { .page=ADV_PAGE_KEYBOARD, .brightness=100, .sleep_index=2 }
+
+uint32_t adv_screen_sleep_ms(unsigned index);
 
 /* Hardware-independent settings page transitions. */
 void adv_screen_step(struct adv_screen_state *state, unsigned action);

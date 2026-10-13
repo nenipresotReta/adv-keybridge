@@ -12,6 +12,9 @@ if(CONFIG_CARDPUTER_SD_LOG)
 endif()
 zephyr_library_sources_ifdef(CONFIG_CARDPUTER_TCA8418 src/kscan_tca8418.c)
 zephyr_library_sources_ifdef(CONFIG_CARDPUTER_UI
+  src/pages.c
+  src/pages_state.c
+  src/behavior_page.c
   src/ui.c
   src/ui_render.c
   src/battery.c

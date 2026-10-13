@@ -8,6 +8,10 @@ trap 'rm -rf "$test_dir"' EXIT HUP INT TERM
   -fsanitize=address,undefined -I"$module_dir/tests/stubs" -I"$module_dir/include" \
   "$module_dir/tests/screen_test.c" "$module_dir/src/screen_state.c" -o "$test_dir/screen_test"
 "$test_dir/screen_test"
+"${CC:-clang}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined \
+  -I"$module_dir/tests/stubs" -I"$module_dir/include" -I"$module_dir/src" \
+  "$module_dir/tests/pages_test.c" "$module_dir/src/pages_state.c" -o "$test_dir/pages_test"
+"$test_dir/pages_test"
 "${CC:-clang}" -std=c11 -Wall -Wextra -Werror \
   -fsanitize=address,undefined -I"$module_dir/tests/stubs" -I"$module_dir/include" \
   "$module_dir/tests/battery_test.c" "$module_dir/src/battery_trend.c" -o "$test_dir/battery_test"

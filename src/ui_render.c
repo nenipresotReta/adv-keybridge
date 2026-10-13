@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include "adv_ui.h"
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 
 enum { BG=0x0841, PANEL=0x1082, ACCENT=0xb81f, WHITE=0xffff,
@@ -69,19 +70,27 @@ void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t 
         else snprintf(sd_label,sizeof(sd_label),"DISPLAY / SD LOG %s",
             m->sd_log.state==ADV_SD_ACTIVE?"ON":"STARTING");
         text(&c,10,28,sd_label,1,m->sd_log.state==ADV_SD_ERROR?RED:MUTED);
-        const char *rows[]={"BRIGHTNESS","SCREEN OFF","BACK TO KEYBOARD"};
-        for(int n=0;n<3;n++) {
-            int top=42+n*20;
-            rect(&c,10,top,220,19,PANEL);
-            if(n==m->screen.selected)rect(&c,10,top,3,19,ACCENT);
-            text(&c,19,top+6,rows[n],1,n==m->screen.selected?WHITE:MUTED);
+        const char *rows[]={"BRIGHTNESS","SLEEP TIME","SCREEN OFF","P1","P2","P3","P4","P5","BACK"};
+        for(unsigned row=0;row<3;row++) {
+            unsigned n=(m->screen.selected+ADV_SETTINGS_ROWS+row-1)%ADV_SETTINGS_ROWS;
+            int top=42+row*20;
+            rect(&c,10,top,220,19,row==1?PANEL:BG);
+            if(row==1)rect(&c,10,top,3,19,ACCENT);
+            text(&c,19,top+6,rows[n],1,row==1?WHITE:MUTED);
+            char value[12];value[0]=0;
+            if(n==0)snprintf(value,sizeof(value),"%u%%",m->screen.brightness);
+            if(n>=3 && n<=7)snprintf(value,sizeof(value),"%s",(m->pages.enabled&(1u<<(n-3)))?"ON":"OFF");
+            if(n==1) {
+                static const char *labels[]={"10S","30S","1MIN","5MIN","10MIN","30MIN","60MIN","INF"};
+                snprintf(value,sizeof(value),"%s",labels[m->screen.sleep_index<8?m->screen.sleep_index:2]);
+            }
+            if(n<=1) {
+                unsigned level=n==0?(m->screen.brightness<5?0:m->screen.brightness<10?1:m->screen.brightness/10+1):m->screen.sleep_index;
+                unsigned ticks=n==0?12:8, spacing=n==0?5:7;
+                for(unsigned tick=0;tick<ticks;tick++)rect(&c,112+tick*spacing,top+7,spacing-2,5,tick<=level?ACCENT:BG);
+            }
+            text(&c,180,top+6,value,1,row==1?WHITE:MUTED);
         }
-        unsigned brightness=m->screen.brightness>100?100:m->screen.brightness;
-        rect(&c,96,50,65,5,BG);
-        rect(&c,96,50,65*brightness/100,5,ACCENT);
-        char brightness_label[8];
-        snprintf(brightness_label,sizeof(brightness_label),"%u%%",brightness);
-        text(&c,180,49,brightness_label,1,WHITE);
         char drain_label[38];
         switch(m->battery.drain_state) {
         case ADV_DRAIN_FALLING:
@@ -93,10 +102,16 @@ void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t 
         default: snprintf(drain_label,sizeof(drain_label),"DRAIN: --");break;
         }
         text(&c,10,104,drain_label,1,MUTED);
-        if(m->screen_error) {
+        if(m->pages_error) {
+            char error[38];
+            if(m->pages_error==-ENOSPC)snprintf(error,sizeof(error),"MAX 5 PAGES / DISABLE ONE FIRST");
+            else if(m->pages_error==-EINVAL)snprintf(error,sizeof(error),"KEEP AT LEAST ONE BLUETOOTH PAGE");
+            else snprintf(error,sizeof(error),"PAGE ERROR %d",m->pages_error);
+            text(&c,10,115,error,1,AMBER);
+        } else if(m->screen_error) {
             char error[32];snprintf(error,sizeof(error),"SCREEN ERROR %d",m->screen_error);
             text(&c,10,115,error,1,RED);
-        } else text(&c,10,115,"W/S MOVE   A/D BRIGHTNESS",1,MUTED);
+        } else text(&c,10,115,"W/S MOVE   A/D ADJUST",1,MUTED);
         text(&c,10,125,"ENTER SELECT   BKSP BACK",1,MUTED);
         return;
     }
@@ -111,13 +126,18 @@ void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t 
       default: snprintf(input,sizeof(input),"ZMK / BUILT-IN KEYBOARD"); break;
     }
     text(&c,10,28,input,1,m->usb==ADV_USB_ERROR?RED:MUTED);
-    for(int n=0;n<5;n++) {
-        int x=10+n*46;
+    unsigned mask=m->pages.enabled?m->pages.enabled:31;
+    unsigned position=0;
+    for(unsigned id=0;id<ADV_PAGE_LIMIT;id++) {
+        if(!(mask&(1u<<id)))continue;
+        int x=10+position++*46;
         rect(&c,x,43,40,29,PANEL);
-        if(n==m->profile)rect(&c,x,70,40,2,ACCENT);
-        char label[3]={'P',(char)('1'+n),0};
-        text(&c,x+6,51,label,1,n==m->profile?WHITE:MUTED);
-        dot(&c,x+31,54,(m->connected&(1<<n))?GREEN:(m->occupied&(1<<n))?MUTED:AMBER);
+        bool selected=id==m->pages.current;
+        if(selected)rect(&c,x,70,40,2,ACCENT);
+        char label[5];
+        snprintf(label,sizeof(label),"P%u",id+1);
+        text(&c,x+3,51,label,1,selected?WHITE:MUTED);
+        if(id<5)dot(&c,x+32,54,(m->connected&(1<<id))?GREEN:(m->occupied&(1<<id))?MUTED:AMBER);
     }
     const char *label="STARTING";uint16_t color=AMBER;
     switch(m->state) {

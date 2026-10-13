@@ -5,9 +5,12 @@
 #include "adv_battery.h"
 #include "adv_screen.h"
 #include "adv_sd_log.h"
+#include "adv_pages.h"
 enum adv_state { ADV_STARTING, ADV_PAIRING, ADV_RECONNECTING, ADV_CONNECTED,
                  ADV_ERROR, ADV_CONFIRM_CLEAR };
 struct adv_ui_model {
+    struct adv_pages_state pages;
+    int pages_error;
     enum adv_state state;
     uint8_t profile, occupied, connected;
     int error;

@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parent.parent
 STANDARD = {"errno.h", "stdbool.h", "stdint.h", "stddef.h", "stdio.h", "string.h"}
 KERNEL = {"zephyr/kernel.h", "zephyr/init.h", "zephyr/sys/atomic.h", "zephyr/logging/log.h"}
 ALLOWED = {
+    "include/adv_pages.h": set(),
+    "src/pages_state.c": {"adv_pages.h"},
+    "src/pages.c": KERNEL | {"adv_pages.h", "adv_screen.h", "zephyr/settings/settings.h", "zmk/ble.h", "zmk/workqueue.h"},
+    "src/behavior_page.c": {"drivers/behavior.h", "zmk/behavior.h", "adv_pages.h"},
     "src/sd_log.c": KERNEL | {"ff.h", "zephyr/fs/fs.h", "zephyr/logging/log_backend.h",
         "zephyr/logging/log_output.h", "adv_sd_log.h"},
     "include/adv_sd_log.h": set(),
@@ -35,7 +39,7 @@ ALLOWED = {
     "src/battery_trend.c": {"adv_battery_trend.h"},
     "include/adv_screen.h": {"dt-bindings/adv_screen.h"},
     "src/screen_state.c": {"adv_screen.h"},
-    "src/screen.c": KERNEL | {"adv_screen.h", "zephyr/drivers/display.h",
+    "src/screen.c": KERNEL | {"adv_screen.h", "adv_pages.h", "zephyr/drivers/display.h",
         "zephyr/drivers/pwm.h", "zephyr/settings/settings.h", "zmk/keymap.h", "zmk/workqueue.h"},
     "src/behavior_screen.c": {"drivers/behavior.h", "zmk/behavior.h", "adv_screen.h"},
     "include/adv_usb.h": set(),
@@ -80,6 +84,7 @@ def main():
         bindings=re.findall(r'&(\w+)\b',match.group(1))
         if len(bindings)!=56 or any(b not in {"screen","none"} for b in bindings):
             errors.append("Settings keys must be local screen commands or blocked; no HID/BLE/USB fallthrough")
+
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

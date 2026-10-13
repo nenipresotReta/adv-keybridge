@@ -4,6 +4,7 @@
 #include <dt-bindings/adv_screen.h>
 / {
     behaviors {
+        page: page { compatible = "zmk,behavior-adv-page"; #binding-cells = <1>; };
         usb_host: usb_host { compatible = "zmk,behavior-usb-host"; #binding-cells = <0>; };
         screen: screen { compatible = "zmk,behavior-adv-screen"; #binding-cells = <1>; };
     };
@@ -20,7 +21,7 @@
         function {
             bindings = <
                 &kp ESC &kp F1 &kp F2 &kp F3 &kp F4 &kp F5 &kp F6 &kp F7 &kp F8 &kp F9 &kp F10 &kp F11 &kp F12 &kp DEL
-                &trans &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4 &trans &usb_host &screen ADV_SCREEN_OPEN &trans &trans &trans &trans &trans
+                &trans &page 0 &page 1 &page 2 &page 3 &page 4 &trans &usb_host &screen ADV_SCREEN_OPEN &trans &trans &trans &trans &trans
                 &trans &trans &kp C_VOL_UP &kp C_VOL_DN &kp C_MUTE &trans &trans &trans &trans &trans &trans &kp UP &trans &trans
                 &trans &trans &trans &kp C_PREV &kp C_NEXT &kp C_PLAY_PAUSE &trans &trans &trans &trans &kp LEFT &kp DOWN &kp RIGHT &trans
             >;
