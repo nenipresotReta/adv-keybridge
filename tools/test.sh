@@ -4,6 +4,13 @@ module_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 "${PYTHON:-python3}" "$module_dir/tools/check_architecture.py"
 test_dir=$(mktemp -d "${TMPDIR:-/tmp}/adv-zmk-test.XXXXXX")
 trap 'rm -rf "$test_dir"' EXIT HUP INT TERM
+"${CC:-clang}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined \
+  -I"$module_dir/tests/stubs" -I"$module_dir/include" \
+  "$module_dir/tests/battery_history_test.c" -o "$test_dir/battery_history_test"
+"$test_dir/battery_history_test"
+"${CC:-clang}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined \
+  "$module_dir/tests/ble_policy_test.c" -o "$test_dir/ble_policy_test"
+"$test_dir/ble_policy_test"
 "${CC:-clang}" -std=c11 -Wall -Wextra -Werror \
   -fsanitize=address,undefined -I"$module_dir/tests/stubs" -I"$module_dir/include" \
   "$module_dir/tests/screen_test.c" "$module_dir/src/screen_state.c" -o "$test_dir/screen_test"

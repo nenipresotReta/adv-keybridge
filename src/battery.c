@@ -8,6 +8,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/atomic.h>
 #include "adv_battery.h"
+#include "adv_battery_history.h"
 #include "adv_battery_trend.h"
 
 LOG_MODULE_REGISTER(adv_battery, LOG_LEVEL_INF);
@@ -60,6 +61,7 @@ static void battery_thread(void *a, void *b, void *c) {
     for (;;) {
         uint16_t mv = 0;
         error = sample(&mv);
+        adv_history_sample(k_uptime_get(),error?0:mv);
         adv_battery_trend_update(&trend,k_uptime_get(),error?0:mv);
         atomic_set(&drain,((uint32_t)trend.state<<16)|trend.rate);
         atomic_set(&voltage, error ? 0 : mv);

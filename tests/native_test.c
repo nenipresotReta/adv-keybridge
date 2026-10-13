@@ -56,13 +56,13 @@ int main(int argc,char **argv) {
         }
         assert(count==56);
     }
-    for(int page=ADV_PAGE_KEYBOARD;page<=ADV_PAGE_SETTINGS;page++)
+    for(int page=ADV_PAGE_KEYBOARD;page<=ADV_PAGE_BATTERY;page++)
     for(int s=ADV_STARTING;s<=ADV_CONFIRM_CLEAR;s++) for(int usb=ADV_USB_OFF;usb<=ADV_USB_ERROR;usb++) {
         struct adv_ui_model m={.state=s,.profile=4,.occupied=0x13,.connected=0x10,.error=-19,
             .usb=usb,.usb_reports=0xffffffffu,.usb_media_reports=0xffffffffu,.usb_error=-12345,
             .battery={.valid=true,.millivolts=4200,.percent=100,.drain_state=s%5,.drain_tenths_per_hour=123},
             .pages={.enabled=11,.current=3},
-            .screen={.page=page,.selected=s%9,.brightness=s%2?10:100},.screen_error=-12345};
+            .screen={.page=page,.selected=s%6,.brightness=s%2?10:100},.screen_error=-12345};
         uint8_t guarded[ADV_WIDTH*12*2+32];
         for(int y=0;y<ADV_HEIGHT;y+=12) {
             memset(guarded,0xa5,sizeof(guarded));
@@ -84,8 +84,9 @@ int main(int argc,char **argv) {
                 .connected=(state==ADV_CONNECTED?2:0),.error=-19,
                 .battery={.valid=state!=ADV_STARTING,.millivolts=state==ADV_ERROR?3500:4050,
                           .percent=state==ADV_ERROR?6:80,.drain_state=state==ADV_ERROR?ADV_DRAIN_FALLING:ADV_DRAIN_LEARNING,.drain_tenths_per_hour=87},
-                .screen={.page=state>=ADV_ERROR?ADV_PAGE_SETTINGS:ADV_PAGE_KEYBOARD,
-                         .selected=state==ADV_CONFIRM_CLEAR?8:1,.sleep_index=2,.brightness=state==ADV_ERROR?50:100}};
+                .screen={.page=state==ADV_ERROR?ADV_PAGE_BATTERY:state==ADV_CONFIRM_CLEAR?ADV_PAGE_SETTINGS:ADV_PAGE_KEYBOARD,
+                         .selected=state==ADV_CONFIRM_CLEAR?3:1,.profile_cursor=2,.sleep_index=2,.brightness=state==ADV_ERROR?50:100}};
+            for(unsigned i=0;i<ADV_HISTORY_COLUMNS;i++)m.chart.mv[i]=4200-i*2;
             adv_render_band(&m,y%ADV_HEIGHT,1,rowbuf);
             for(int x=0;x<ADV_WIDTH;x++) {
                 uint16_t c=(rowbuf[x*2]<<8)|rowbuf[x*2+1];

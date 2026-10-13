@@ -17,6 +17,8 @@ void adv_pages_get(struct adv_pages_state *s) {
     unsigned value=(unsigned)atomic_get(&snapshot);
     *s=(struct adv_pages_state){.enabled=value&31,.current=(value>>8)&7};
 }
+extern void adv_ble_policy_refresh(void);
+unsigned adv_pages_enabled_mask(void) { return (unsigned)atomic_get(&snapshot)&31; }
 int adv_pages_error(void) { return atomic_get(&last_error); }
 static void save(struct k_work *work) {
     ARG_UNUSED(work);
@@ -40,16 +42,19 @@ static int restored(void) {
     struct adv_pages_state s;adv_pages_get(&s);
     unsigned profile=zmk_ble_active_profile_index();
     s.current=(s.enabled&(1u<<profile))?profile:(unsigned)adv_pages_at(s.enabled,0);
-    int err=zmk_ble_prof_select(s.current);
     atomic_set(&snapshot,s.enabled|(s.current<<8));
+    int err=zmk_ble_prof_select(s.current);
+    adv_ble_policy_refresh();
     return err;
 }
 SETTINGS_STATIC_HANDLER_DEFINE_WITH_CPRIO(adv_pages_preferences,"adv_pages",NULL,load,restored,NULL,90);
 
 static int apply(struct adv_pages_state next) {
-    int err=zmk_ble_prof_select(next.current);
-    if(err)return err;
+    unsigned previous=(unsigned)atomic_get(&snapshot);
     atomic_set(&snapshot,next.enabled|(next.current<<8));
+    int err=zmk_ble_prof_select(next.current);
+    if(err) { atomic_set(&snapshot,previous);return err; }
+    adv_ble_policy_refresh();
     adv_screen_activity();
     return 0;
 }

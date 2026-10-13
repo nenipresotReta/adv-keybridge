@@ -17,6 +17,7 @@ zephyr_library_sources_ifdef(CONFIG_CARDPUTER_UI
   src/behavior_page.c
   src/ui.c
   src/ui_render.c
+  src/battery_history.c
   src/battery.c
   src/battery_trend.c
   src/screen.c

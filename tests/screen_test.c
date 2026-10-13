@@ -34,7 +34,8 @@ int settings_save_one(const char *name,const void *p,size_t n) {
 static int read_value(void *p,void *buffer,size_t size) {
     assert(size==1);*(uint8_t *)buffer=*(uint8_t *)p;return 1;
 }
-int adv_pages_toggle(unsigned id) { assert(id<6);return 0; }
+static unsigned toggled=99;
+int adv_pages_toggle(unsigned id) { assert(id<5);toggled=id;return 0; }
 static void action(unsigned n) { assert(!adv_screen_request(n));adv_screen_tick(); }
 int main(void) {
     assert(!adv_screen_init() && pulse==1000000 && !blank);
@@ -66,7 +67,7 @@ int main(void) {
     assert(state.asleep && blank && pulse==0 && !active && state.page==ADV_PAGE_KEYBOARD);
     assert(adv_screen_menu_action(&state)==ADV_SCREEN_WAKE);
     action(ADV_SCREEN_WAKE);assert(!state.asleep && !blank && pulse==960784 && !active);
-    action(ADV_SCREEN_OPEN);action(ADV_SCREEN_PREVIOUS);assert(state.selected==8);
+    action(ADV_SCREEN_OPEN);action(ADV_SCREEN_PREVIOUS);assert(state.selected==5);
     action(ADV_SCREEN_SELECT);assert(!active && state.page==ADV_PAGE_KEYBOARD);
     action(ADV_SCREEN_OPEN);action(ADV_SCREEN_BACK);assert(!active);
     assert(!adv_screen_request(ADV_SCREEN_WAKE));
@@ -122,5 +123,19 @@ int main(void) {
     }
     restored=8;assert(load_brightness("sleep",1,read_value,&restored)==-EINVAL);
     restored=0;assert(!load_brightness("sleep",1,read_value,&restored));adv_screen_tick();assert(state.sleep_index==0);
+    action(ADV_SCREEN_OPEN);
+    for(unsigned i=0;i<3;i++)action(ADV_SCREEN_NEXT);
+    assert(state.selected==3 && state.profile_cursor==0);
+    action(ADV_SCREEN_DIM);assert(state.profile_cursor==4);
+    action(ADV_SCREEN_SELECT);assert(toggled==4 && state.page==ADV_PAGE_SETTINGS);
+    action(ADV_SCREEN_BRIGHTEN);assert(state.profile_cursor==0);
+    action(ADV_SCREEN_SELECT);assert(toggled==0);
+    action(ADV_SCREEN_NEXT);action(ADV_SCREEN_SELECT);
+    assert(state.page==ADV_PAGE_BATTERY && active);
+    for(unsigned i=0;i<10;i++)action(ADV_SCREEN_DIM);
+    assert(state.chart_scale==0);
+    for(unsigned i=0;i<10;i++)action(ADV_SCREEN_BRIGHTEN);
+    assert(state.chart_scale==6 && active);
+    action(ADV_SCREEN_BACK);assert(state.page==ADV_PAGE_SETTINGS && active);
     puts("PASS: production settings isolation, PWM limits/off/wake, persistence, bounded queue and hardware failure rollback");
 }

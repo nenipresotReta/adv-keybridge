@@ -4,13 +4,13 @@
 #include <stdint.h>
 #include "dt-bindings/adv_screen.h"
 
-enum adv_page { ADV_PAGE_KEYBOARD, ADV_PAGE_SETTINGS };
+enum adv_page { ADV_PAGE_KEYBOARD, ADV_PAGE_SETTINGS, ADV_PAGE_BATTERY };
 struct adv_screen_state {
     enum adv_page page;
-    uint8_t selected, brightness, sleep_index;
+    uint8_t selected, brightness, sleep_index, profile_cursor, chart_scale;
     bool asleep;
 };
-#define ADV_SCREEN_DEFAULT { .page=ADV_PAGE_KEYBOARD, .brightness=100, .sleep_index=2 }
+#define ADV_SCREEN_DEFAULT { .page=ADV_PAGE_KEYBOARD, .brightness=100, .sleep_index=2, .chart_scale=2 }
 
 uint32_t adv_screen_sleep_ms(unsigned index);
 

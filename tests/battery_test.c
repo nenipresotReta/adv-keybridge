@@ -48,3 +48,5 @@ int main(void) {
     ready=true;setup_error=-EIO;assert(!run_sample().valid && reads==0);
     puts("PASS: production battery divider/filter, bounded burst, ADC/setup errors and stale reading invalidation");
 }
+
+void adv_history_sample(int64_t now,uint16_t mv) { (void)now;(void)mv; }

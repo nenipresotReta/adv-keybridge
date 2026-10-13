@@ -44,7 +44,9 @@ SETTINGS_STATIC_HANDLER_DEFINE_WITH_CPRIO(adv_ui_ready, "adv_ui", NULL, NULL,
 static int paint(const struct adv_ui_model *m) {
     if(!display_ok)return -ENODEV;
     if(m->screen.asleep){drawn=false;return 0;}
-    if(drawn && !memcmp(&m->pages,&previous.pages,sizeof(m->pages)) &&
+    if(drawn && m->chart.revision==previous.chart.revision && m->chart.error==previous.chart.error && m->chart.eta==previous.chart.eta &&
+       m->chart.eta_minutes==previous.chart.eta_minutes &&
+       m->screen.chart_scale==previous.screen.chart_scale && !memcmp(&m->pages,&previous.pages,sizeof(m->pages)) &&
        m->pages_error==previous.pages_error && m->state==previous.state && m->profile==previous.profile &&
        m->occupied==previous.occupied && m->connected==previous.connected &&
        m->error==previous.error && m->usb==previous.usb &&
@@ -57,7 +59,7 @@ static int paint(const struct adv_ui_model *m) {
        m->battery.drain_state==previous.battery.drain_state &&
        m->battery.drain_tenths_per_hour==previous.battery.drain_tenths_per_hour &&
        m->screen.page==previous.screen.page && m->screen.selected==previous.screen.selected &&
-       m->screen.brightness==previous.screen.brightness && m->screen.sleep_index==previous.screen.sleep_index && m->screen_error==previous.screen_error &&
+       m->screen.brightness==previous.screen.brightness && m->screen.profile_cursor==previous.screen.profile_cursor && m->screen.sleep_index==previous.screen.sleep_index && m->screen_error==previous.screen_error &&
        m->sd_log.state==previous.sd_log.state && m->sd_log.error==previous.sd_log.error &&
        m->sd_log.dropped==previous.sd_log.dropped &&
        m->previous_usb_stage==previous.previous_usb_stage)return 0;
@@ -162,7 +164,8 @@ static void update(struct k_work *work) {
     adv_sd_log_get_status(&m.sd_log);
 #endif
     adv_screen_get_state(&m.screen,&m.screen_error);
-    if(m.screen.page==ADV_PAGE_SETTINGS || m.screen.asleep)confirm_until=0;
+    if(m.screen.page==ADV_PAGE_BATTERY)adv_history_snapshot(m.screen.chart_scale,&m.chart);
+    if(m.screen.page!=ADV_PAGE_KEYBOARD || m.screen.asleep)confirm_until=0;
 #if IS_ENABLED(CONFIG_CARDPUTER_USB_HOST)
     struct adv_usb_status usb;
     adv_usb_get_status(&usb);
@@ -207,6 +210,7 @@ static int early_ui(void) {
     if(display_ok) {
         struct adv_ui_model m={.state=ADV_STARTING,.reset_reason=reset_reason};
         adv_screen_get_state(&m.screen,&m.screen_error);
+    if(m.screen.page==ADV_PAGE_BATTERY)adv_history_snapshot(m.screen.chart_scale,&m.chart);
         paint(&m);
     }
     LOG_INF("ADV ZMK: display=%d; next stage Bluetooth init",display_ok);

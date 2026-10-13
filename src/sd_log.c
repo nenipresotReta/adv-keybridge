@@ -13,6 +13,7 @@
 #include <zephyr/logging/log_output.h>
 #include <zephyr/sys/atomic.h>
 #include "adv_sd_log.h"
+#include "adv_battery_history.h"
 
 LOG_MODULE_REGISTER(adv_sd_log, LOG_LEVEL_INF);
 #define CHUNK_BYTES 256
@@ -184,6 +185,7 @@ static int write_bytes(const void *data, size_t length) {
     return (size_t)n==length ? 0 : -ENOSPC;
 }
 static void stop_storage(int error) {
+    adv_history_storage_stop(error);
     atomic_clear(&accepting);
     atomic_set(&error_code,error);
     atomic_set(&state,ADV_SD_ERROR);
@@ -202,6 +204,7 @@ static int sync_if_dirty(void) {
 static void sd_thread(void *a, void *b, void *c) {
     ARG_UNUSED(a);ARG_UNUSED(b);ARG_UNUSED(c);
     int err=start_storage();
+    adv_history_storage_start(err);
     if (err) { stop_storage(err);return; }
     atomic_set(&state,ADV_SD_ACTIVE);
     LOG_INF("SD log active: /ADVLOG, file=%ld; sync 2s when dirty; no automatic format/delete",
@@ -211,6 +214,7 @@ static void sd_thread(void *a, void *b, void *c) {
     int64_t next_sync=k_uptime_get()+2000;
     uint32_t reported_dropped=0;
     while (!err) {
+        adv_history_storage_tick();
         service_read_request();
         struct log_chunk chunk;
         if (!k_msgq_get(&log_chunks,&chunk,K_NO_WAIT))

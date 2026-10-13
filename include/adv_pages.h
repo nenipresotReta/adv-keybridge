@@ -13,3 +13,4 @@ int adv_pages_next(void);
 int adv_pages_toggle(unsigned id);
 void adv_pages_get(struct adv_pages_state *out);
 int adv_pages_error(void);
+unsigned adv_pages_enabled_mask(void);

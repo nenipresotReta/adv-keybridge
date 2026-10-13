@@ -123,7 +123,7 @@ static void commit(struct adv_screen_state next,bool persist) {
     if(hardware_change)screen_error=error;
     bool changed=next.brightness!=state.brightness || next.sleep_index!=state.sleep_index;
     state=next;
-    if(state.page==ADV_PAGE_SETTINGS)zmk_keymap_layer_activate(ADV_SCREEN_LAYER,false);
+    if(state.page!=ADV_PAGE_KEYBOARD)zmk_keymap_layer_activate(ADV_SCREEN_LAYER,false);
     else zmk_keymap_layer_deactivate(ADV_SCREEN_LAYER,false);
     if(changed) {
         atomic_set(&saved_brightness,state.brightness);
@@ -150,8 +150,8 @@ void adv_screen_tick(void) {
     unsigned action;
     for(unsigned n=0;n<16 && !k_msgq_get(&screen_commands,&action,K_NO_WAIT);n++) {
         struct adv_screen_state next=state;
-        if(action==ADV_SCREEN_SELECT && state.page==ADV_PAGE_SETTINGS && state.selected>=3 && state.selected<=7)
-            (void)adv_pages_toggle(state.selected-3);
+        if(action==ADV_SCREEN_SELECT && state.page==ADV_PAGE_SETTINGS && state.selected==3)
+            (void)adv_pages_toggle(state.profile_cursor);
         adv_screen_step(&next,action);
         commit(next,true);
         LOG_INF("Screen page=%u asleep=%d brightness=%u",state.page,state.asleep,state.brightness);

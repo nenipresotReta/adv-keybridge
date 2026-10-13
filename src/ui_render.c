@@ -47,10 +47,53 @@ static void dot(struct canvas *c,int x,int y,uint16_t color) {
     for(int yy=-3;yy<=3;yy++) for(int xx=-3;xx<=3;xx++)
         if(xx*xx+yy*yy<=10)rect(c,x+xx,y+yy,1,1,color);
 }
+static void voltage_chart(struct canvas *c,const struct adv_ui_model *m) {
+    static const char *scales[]={"10 MIN","30 MIN","1 H","2 H","4 H","8 H","24 H"};
+    unsigned scale=m->screen.chart_scale<7?m->screen.chart_scale:2;
+    char label[36];
+    snprintf(label,sizeof(label),"%s / %u.%02uV",scales[scale],m->battery.millivolts/1000,(m->battery.millivolts%1000)/10);
+    text(c,10,28,label,1,MUTED);
+    const char *kind=m->chart.eta==ADV_ETA_FULL?"FULL":m->chart.eta==ADV_ETA_LEFT?"LEFT":"ETA";
+    if(m->chart.eta_minutes)snprintf(label,sizeof(label),"~%s %uH%02uM",kind,m->chart.eta_minutes/60,m->chart.eta_minutes%60);
+    else snprintf(label,sizeof(label),"%s --",kind);
+    text(c,139,28,label,1,MUTED);
+    unsigned low=4500,high=0;
+    for(unsigned i=0;i<ADV_HISTORY_COLUMNS;i++) {
+        unsigned mv=m->chart.mv[i]&0x7fff;if(!mv)continue;
+        if(mv<low)low=mv;
+        if(mv>high)high=mv;
+    }
+    if(!high) { text(c,44,70,"WAITING FOR SAMPLES",1,MUTED); }
+    else {
+        low=low>=100?(low/100)*100-100:0;high=((high+99)/100)*100+100;
+        for(unsigned i=0;i<3;i++) {
+            unsigned value=high-(high-low)*i/2;int y=43+i*30;
+            snprintf(label,sizeof(label),"%u.%02uV",value/1000,(value%1000)/10);
+            text(c,8,y-3,label,1,MUTED);rect(c,46,y,180,1,PANEL);
+        }
+        int prev_x=-1,prev_y=0;
+        for(unsigned i=0;i<ADV_HISTORY_COLUMNS;i++) {
+            unsigned raw=m->chart.mv[i],mv=raw&0x7fff;
+            if(raw&0x8000)prev_x=-1;
+            if(!mv)continue;
+            int x=46+i,y=103-(mv-low)*60/(high-low);
+            if(prev_x>=0)for(int xx=prev_x;xx<=x;xx++) {
+                int yy=prev_y+(y-prev_y)*(xx-prev_x)/(x-prev_x);
+                rect(c,xx,yy,1,2,ACCENT);
+            }
+            rect(c,x,y,2,2,ACCENT);prev_x=x;prev_y=y;
+        }
+        text(c,46,108,scales[scale],1,MUTED);text(c,208,108,"NOW",1,MUTED);
+    }
+    text(c,10,119,"A/D ZOOM   G0/BKSP BACK",1,MUTED);
+    if(m->chart.error)snprintf(label,sizeof(label),"RAM ONLY / SD ERROR %d",m->chart.error);
+    else snprintf(label,sizeof(label),"VOLTAGE / RUN TIME");
+    text(c,10,128,label,1,m->chart.error?AMBER:MUTED);
+}
 void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t *pixels) {
     struct canvas c={pixels,y,h};
     rect(&c,0,y,ADV_WIDTH,h,BG);
-    text(&c,10,9,m->screen.page==ADV_PAGE_SETTINGS?"SETTINGS":"ADV KEYBRIDGE",2,WHITE);
+    text(&c,10,9,m->screen.page==ADV_PAGE_BATTERY?"BATTERY":m->screen.page==ADV_PAGE_SETTINGS?"SETTINGS":"ADV KEYBRIDGE",2,WHITE);
     uint16_t battery_color = !m->battery.valid ? MUTED :
         m->battery.percent <= 20 ? RED : m->battery.percent <= 40 ? AMBER : GREEN;
     rect(&c,172,10,19,11,battery_color);
@@ -61,6 +104,7 @@ void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t 
     if(m->battery.valid)snprintf(battery_label,sizeof(battery_label),"~%u%%",m->battery.percent);
     else snprintf(battery_label,sizeof(battery_label),"--%%");
     text(&c,198,12,battery_label,1,battery_color);
+    if(m->screen.page==ADV_PAGE_BATTERY) { voltage_chart(&c,m);return; }
     if(m->screen.page==ADV_PAGE_SETTINGS) {
         char sd_label[39];
         if(m->sd_log.state==ADV_SD_ERROR)
@@ -70,7 +114,7 @@ void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t 
         else snprintf(sd_label,sizeof(sd_label),"DISPLAY / SD LOG %s",
             m->sd_log.state==ADV_SD_ACTIVE?"ON":"STARTING");
         text(&c,10,28,sd_label,1,m->sd_log.state==ADV_SD_ERROR?RED:MUTED);
-        const char *rows[]={"BRIGHTNESS","SLEEP TIME","SCREEN OFF","P1","P2","P3","P4","P5","BACK"};
+        const char *rows[]={"BRIGHTNESS","SLEEP TIME","SCREEN OFF","SLOTS","BATTERY","BACK"};
         for(unsigned row=0;row<3;row++) {
             unsigned n=(m->screen.selected+ADV_SETTINGS_ROWS+row-1)%ADV_SETTINGS_ROWS;
             int top=42+row*20;
@@ -79,7 +123,18 @@ void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t 
             text(&c,19,top+6,rows[n],1,row==1?WHITE:MUTED);
             char value[12];value[0]=0;
             if(n==0)snprintf(value,sizeof(value),"%u%%",m->screen.brightness);
-            if(n>=3 && n<=7)snprintf(value,sizeof(value),"%s",(m->pages.enabled&(1u<<(n-3)))?"ON":"OFF");
+            if(n==3) {
+                for(unsigned id=0;id<5;id++) {
+                    int x=83+id*29;
+                    bool focused=row==1 && id==m->screen.profile_cursor;
+                    bool enabled=m->pages.enabled&(1u<<id);
+                    char slot[3]={'P',(char)('1'+id),0};
+                    if(focused)rect(&c,x-2,top+2,25,15,BG);
+                    text(&c,x,top+6,slot,1,enabled?WHITE:MUTED);
+                    rect(&c,x+15,top+8,3,3,enabled?GREEN:MUTED);
+                    if(focused)rect(&c,x-2,top+17,25,1,ACCENT);
+                }
+            }
             if(n==1) {
                 static const char *labels[]={"10S","30S","1MIN","5MIN","10MIN","30MIN","60MIN","INF"};
                 snprintf(value,sizeof(value),"%s",labels[m->screen.sleep_index<8?m->screen.sleep_index:2]);
@@ -91,17 +146,6 @@ void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t 
             }
             text(&c,180,top+6,value,1,row==1?WHITE:MUTED);
         }
-        char drain_label[38];
-        switch(m->battery.drain_state) {
-        case ADV_DRAIN_FALLING:
-            snprintf(drain_label,sizeof(drain_label),"DRAIN ~%u.%u%%/H  VOLT EST.",
-                m->battery.drain_tenths_per_hour/10,m->battery.drain_tenths_per_hour%10);break;
-        case ADV_DRAIN_STABLE: snprintf(drain_label,sizeof(drain_label),"DRAIN: STABLE / VOLT EST.");break;
-        case ADV_DRAIN_RISING: snprintf(drain_label,sizeof(drain_label),"DRAIN: VOLTAGE RISING");break;
-        case ADV_DRAIN_LEARNING: snprintf(drain_label,sizeof(drain_label),"DRAIN: LEARNING ~5 MIN");break;
-        default: snprintf(drain_label,sizeof(drain_label),"DRAIN: --");break;
-        }
-        text(&c,10,104,drain_label,1,MUTED);
         if(m->pages_error) {
             char error[38];
             if(m->pages_error==-ENOSPC)snprintf(error,sizeof(error),"MAX 5 PAGES / DISABLE ONE FIRST");

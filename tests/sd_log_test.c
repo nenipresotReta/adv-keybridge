@@ -90,3 +90,7 @@ int main(void) {
  assert(!k_sem_take(&sd_wake,K_NO_WAIT)); /* Enqueue/request signalled worker. */
  puts("PASS: production SD mailbox never calls FS; bounded overflow; no format/overwrite; mount/stat/open/full/partial/sync errors; rotation");
 }
+
+void adv_history_storage_start(int err) { (void)err; }
+void adv_history_storage_tick(void) {}
+void adv_history_storage_stop(int err) { (void)err; }

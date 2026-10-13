@@ -1,7 +1,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include "../src/pages.c"
-static unsigned profile, scheduled;
+static unsigned profile, scheduled, refreshes;
+void adv_ble_policy_refresh(void) { refreshes++; }
 static int select_error;
 static struct k_work_q lowprio;
 unsigned zmk_ble_active_profile_index(void) { return profile; }
@@ -37,6 +38,6 @@ int main(void) {
     uint8_t valid=6;assert(!load("enabled",1,read_mask,&valid));profile=4;assert(!restored() && profile==1);
     uint8_t legacy=35;assert(!load("enabled",1,read_mask,&legacy));
     struct adv_pages_state migrated;adv_pages_get(&migrated);assert(migrated.enabled==3);
-    save(NULL);assert(scheduled);
+    save(NULL);assert(scheduled && refreshes);
     puts("PASS: production page limits, compact shortcuts, cycling, BLE failure, persistence");
 }

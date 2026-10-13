@@ -7,6 +7,7 @@
 #include <assert.h>
 #define ARG_UNUSED(x) (void)(x)
 #define K_NO_WAIT 0
+#define K_FOREVER -1
 #define K_MSEC(n) (n)
 #define K_SECONDS(n) ((n)*1000)
 #define MIN(a,b) ((a)<(b)?(a):(b))
