@@ -1,0 +1,3 @@
+description: Toggle Cardputer USB keyboard host mode
+compatible: "zmk,behavior-usb-host"
+include: zero_param.yaml

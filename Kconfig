@@ -1,0 +1,31 @@
+config CARDPUTER_SD_LOG
+    bool "Independent SD log writer"
+    depends on FILE_SYSTEM && FAT_FILESYSTEM_ELM && LOG
+
+config CARDPUTER_TCA8418
+    bool "Cardputer ADV TCA8418 keyboard"
+    default y
+    depends on DT_HAS_M5STACK_ADV_TCA8418_ENABLED
+    select I2C
+    select GPIO
+    select KSCAN
+
+config CARDPUTER_UI
+    bool "Cardputer ADV status display"
+    default y
+    depends on BOARD_CARDPUTER_ADV
+    select DISPLAY
+    select SPI
+    select GPIO
+    select ADC
+    select PWM
+    select ZMK_LOW_PRIORITY_WORK_QUEUE
+
+config CARDPUTER_USB_HOST
+    bool "External USB boot keyboard to ZMK Bluetooth"
+    default y
+    depends on BOARD_CARDPUTER_ADV
+
+config CARDPUTER_LOG_CONSOLE
+    bool "Read-only SD log export over shell"
+    depends on CARDPUTER_SD_LOG && SHELL

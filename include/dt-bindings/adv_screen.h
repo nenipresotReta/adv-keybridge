@@ -1,0 +1,10 @@
+#pragma once
+#define ADV_SCREEN_OPEN 0
+#define ADV_SCREEN_PREVIOUS 1
+#define ADV_SCREEN_NEXT 2
+#define ADV_SCREEN_DIM 3
+#define ADV_SCREEN_BRIGHTEN 4
+#define ADV_SCREEN_SELECT 5
+#define ADV_SCREEN_BACK 6
+#define ADV_SCREEN_WAKE 7
+#define ADV_SCREEN_LAYER 2

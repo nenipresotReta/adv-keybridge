@@ -1,0 +1,9 @@
+description: Cardputer ADV PWM backlight and G0 menu button
+compatible: "m5stack,adv-controls"
+properties:
+  menu-gpios:
+    type: phandle-array
+    required: true
+  pwms:
+    type: phandle-array
+    required: true

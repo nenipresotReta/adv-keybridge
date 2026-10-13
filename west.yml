@@ -1,0 +1,49 @@
+manifest:
+  projects:
+    - name: fatfs
+      url: https://github.com/zephyrproject-rtos/fatfs
+      revision: 16245c7c41d2b79e74984f49b5202551786b8a9b
+      path: modules/fs/fatfs
+      clone-depth: 1
+    - name: tinyusb
+      url: https://github.com/hathach/tinyusb
+      revision: dae3f9a366bfcddbf9dcf1b48d7500286a849539 # TinyUSB 0.21.0
+      path: modules/lib/tinyusb
+      clone-depth: 1
+    - name: zmk
+      url: https://github.com/zmkfirmware/zmk
+      revision: 4dd95d7840eb3d5a3f59bb29fbf1ab054715ef85
+      clone-depth: 1
+    - name: zephyr
+      url: https://github.com/zmkfirmware/zephyr
+      revision: 10ba6d0cb38bc3d258775d27982f707599320085
+      clone-depth: 1
+      west-commands: scripts/west-commands.yml
+    - name: hal_espressif
+      url: https://github.com/zephyrproject-rtos/hal_espressif
+      revision: 8502aafa3856b9de1e530ccc3ce36e19978f58d2
+      path: modules/hal/espressif
+      clone-depth: 1
+      west-commands: west/west-commands.yml
+    - name: hal_xtensa
+      url: https://github.com/zephyrproject-rtos/hal_xtensa
+      revision: baa56aa3e119b5aae43d16f9b2d2c8112e052871
+      path: modules/hal/xtensa
+      clone-depth: 1
+    - name: tinycrypt
+      url: https://github.com/zephyrproject-rtos/tinycrypt
+      revision: 1012a3ebee18c15ede5efc8332ee2fc37817670f
+      path: modules/crypto/tinycrypt
+      clone-depth: 1
+    - name: mbedtls
+      url: https://github.com/zephyrproject-rtos/mbedtls
+      revision: 4952e1328529ee549d412b498ea71c54f30aa3b1
+      path: modules/crypto/mbedtls
+      clone-depth: 1
+    - name: lvgl
+      url: https://github.com/zmkfirmware/lvgl
+      revision: f1db87ee98f1810328a8419572fa42a3b5f352ae
+      path: modules/lib/gui/lvgl
+      clone-depth: 1
+  self:
+    path: cardputer-zmk

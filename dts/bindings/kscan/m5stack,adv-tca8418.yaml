@@ -1,0 +1,10 @@
+description: Cardputer ADV 7x8 TCA8418 mapped to its physical 4x14 keyboard
+compatible: "m5stack,adv-tca8418"
+include: i2c-device.yaml
+properties:
+  irq-gpios:
+    type: phandle-array
+    required: true
+  poll-interval-ms:
+    type: int
+    default: 10

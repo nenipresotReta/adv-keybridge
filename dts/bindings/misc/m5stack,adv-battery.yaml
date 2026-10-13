@@ -1,0 +1,8 @@
+description: Cardputer ADV battery voltage sense (100k/100k divider)
+compatible: "m5stack,adv-battery"
+include: base.yaml
+properties:
+  io-channels:
+    type: phandle-array
+    required: true
+    description: Battery divider output, GPIO10 (ADC1 channel 9)

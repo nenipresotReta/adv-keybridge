@@ -1,0 +1,3 @@
+description: Cardputer ADV local settings navigation and screen commands
+compatible: "zmk,behavior-adv-screen"
+include: one_param.yaml

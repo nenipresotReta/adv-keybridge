@@ -1,0 +1,168 @@
+/dts-v1/;
+#include <espressif/esp32s3/esp32s3_wroom_n8.dtsi>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+#include <zephyr/dt-bindings/pinctrl/esp32s3-pinctrl.h>
+#include <zephyr/dt-bindings/pinctrl/esp-pinctrl-common.h>
+#include <zephyr/dt-bindings/pinctrl/esp32s3-gpio-sigmap.h>
+#include <zephyr/dt-bindings/mipi_dbi/mipi_dbi.h>
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/pwm/pwm.h>
+#include <dt-bindings/zmk/matrix_transform.h>
+
+/ {
+    model = "M5Stack Cardputer ADV ZMK";
+    compatible = "m5stack,cardputer-adv";
+    chosen {
+        zephyr,sram = &sram1;
+        zephyr,flash = &flash0;
+        zephyr,code-partition = &slot0_partition;
+        zephyr,bt-hci = &esp32_bt_hci;
+        zephyr,console = &usb_serial;
+        zephyr,shell-uart = &usb_serial;
+        zephyr,display = &lcd;
+        zmk,kscan = &keyboard;
+        zmk,matrix-transform = &default_transform;
+    };
+    aliases { watchdog0 = &wdt0; };
+    adv_battery {
+        compatible = "m5stack,adv-battery";
+        io-channels = <&adc0 9>; /* ADC1 channel 9 = GPIO10 */
+    };
+    adv_controls: controls {
+        compatible = "m5stack,adv-controls";
+        menu-gpios = <&gpio0 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+        pwms = <&ledc0 0 PWM_HZ(1000) PWM_POLARITY_NORMAL>; /* GPIO38; Bruce analogWrite frequency */
+    };
+    default_transform: matrix_transform {
+        compatible = "zmk,matrix-transform";
+        rows = <4>; columns = <14>;
+        map = <
+            RC(0,0) RC(0,1) RC(0,2) RC(0,3) RC(0,4) RC(0,5) RC(0,6)
+            RC(0,7) RC(0,8) RC(0,9) RC(0,10) RC(0,11) RC(0,12) RC(0,13)
+            RC(1,0) RC(1,1) RC(1,2) RC(1,3) RC(1,4) RC(1,5) RC(1,6)
+            RC(1,7) RC(1,8) RC(1,9) RC(1,10) RC(1,11) RC(1,12) RC(1,13)
+            RC(2,0) RC(2,1) RC(2,2) RC(2,3) RC(2,4) RC(2,5) RC(2,6)
+            RC(2,7) RC(2,8) RC(2,9) RC(2,10) RC(2,11) RC(2,12) RC(2,13)
+            RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5) RC(3,6)
+            RC(3,7) RC(3,8) RC(3,9) RC(3,10) RC(3,11) RC(3,12) RC(3,13)
+        >;
+    };
+    dbi: mipi_dbi {
+        compatible = "zephyr,mipi-dbi-spi";
+        spi-dev = <&spi3>;
+        dc-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>; /* GPIO34 */
+        reset-gpios = <&gpio1 1 GPIO_ACTIVE_LOW>; /* GPIO33 */
+        write-only;
+        #address-cells = <1>; #size-cells = <0>;
+        lcd: display@0 {
+            compatible = "sitronix,st7789v";
+            reg = <0>;
+            mipi-max-frequency = <20000000>;
+            mipi-mode = "MIPI_DBI_MODE_SPI_4WIRE";
+            width = <240>; height = <135>;
+            x-offset = <40>; y-offset = <53>;
+            mdac = <0x60>; colmod = <0x55>; lcm = <0x2c>;
+            vcom = <0x19>; gctrl = <0x35>; gamma = <0x01>;
+            vrhs = <0x12>; vdvs = <0x20>;
+            porch-param = [0c 0c 00 33 33];
+            cmd2en-param = [01 ff]; pwctrl1-param = [a4 a1];
+            pvgam-param = [d0 04 0d 11 13 2b 3f 54 4c 18 0d 0b 1f 23];
+            nvgam-param = [d0 04 0c 11 13 2c 3f 44 51 2f 1f 1f 20 23];
+            ram-param = [00 f0]; rgb-param = [cd 08 14];
+        };
+    };
+};
+&pinctrl {
+    adv_sd_spi: adv_sd_spi {
+        group1 { pinmux = <SPIM2_SCLK_GPIO40>, <SPIM2_MOSI_GPIO14>; };
+        group2 { pinmux = <SPIM2_MISO_GPIO39>; bias-pull-up; };
+    };
+    adv_backlight: adv_backlight {
+        group1 { pinmux = <LEDC_CH0_GPIO38>; output-enable; };
+    };
+    adv_i2c: adv_i2c {
+        group1 {
+            pinmux = <I2C0_SDA_GPIO8>, <I2C0_SCL_GPIO9>;
+            bias-pull-up; drive-open-drain; output-high;
+        };
+    };
+    adv_spi: adv_spi {
+        group1 { pinmux = <SPIM3_SCLK_GPIO36>; };
+        group2 { pinmux = <SPIM3_MOSI_GPIO35>; output-low; };
+    };
+};
+&gpio0 { status = "okay"; };
+&ledc0 {
+    status = "okay";
+    pinctrl-0 = <&adv_backlight>;
+    pinctrl-names = "default";
+    #address-cells = <1>;
+    #size-cells = <0>;
+    channel0@0 { reg = <0>; timer = <0>; };
+};
+&gpio1 { status = "okay"; };
+&usb_serial { status = "okay"; };
+/* GPIO43/44 belong to audio/IR on ADV, not the debug console. */
+&uart0 { status = "disabled"; };
+&i2c0 {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+    pinctrl-0 = <&adv_i2c>; pinctrl-names = "default";
+    keyboard: keyboard@34 {
+        compatible = "m5stack,adv-tca8418";
+        reg = <0x34>;
+        irq-gpios = <&gpio0 11 GPIO_ACTIVE_LOW>;
+        poll-interval-ms = <10>;
+    };
+};
+&spi3 {
+    #address-cells = <1>; #size-cells = <0>;
+    status = "okay";
+    pinctrl-0 = <&adv_spi>; pinctrl-names = "default";
+    cs-gpios = <&gpio1 5 GPIO_ACTIVE_LOW>; /* GPIO37 */
+};
+&spi2 {
+    status = "okay";
+    pinctrl-0 = <&adv_sd_spi>;
+    pinctrl-names = "default";
+    cs-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+    #address-cells = <1>;
+    #size-cells = <0>;
+    sdhc@0 {
+        compatible = "zephyr,sdhc-spi-slot";
+        reg = <0>;
+        status = "okay";
+        spi-max-frequency = <4000000>;
+        mmc {
+            compatible = "zephyr,sdmmc-disk";
+            disk-name = "SD";
+            status = "okay";
+        };
+    };
+};
+&esp32_bt_hci { status = "okay"; };
+&trng0 { status = "okay"; };
+&adc0 {
+    status = "okay";
+    #address-cells = <1>;
+    #size-cells = <0>;
+    channel@9 {
+        reg = <9>;
+        zephyr,gain = "ADC_GAIN_1_4";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,resolution = <12>;
+    };
+};
+&wdt0 { status = "okay"; };
+/* Native Zephyr simple boot layout. This is NOT a Launcher OTA image. */
+&flash0 {
+    partitions {
+        compatible = "fixed-partitions";
+        #address-cells = <1>; #size-cells = <1>;
+        boot_partition: partition@0 { label = "boot"; reg = <0x0 0x10000>; };
+        slot0_partition: partition@10000 { label = "image-0"; reg = <0x10000 0x600000>; };
+        storage_partition: partition@7e0000 { label = "storage"; reg = <0x7e0000 0x2000>; };
+    };
+};
