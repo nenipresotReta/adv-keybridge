@@ -31,3 +31,24 @@ if old in contents:
     assert contents.count(old) == 1
     adapter.write_text(contents.replace(old, new))
 print("ESP32 controller Kconfig and Zephyr 4.1 IRQ compatibility prepared")
+
+# ESP32-S3 has separate RTC slow (0x50000000) and fast (0x600fe000)
+# segments. The 4.1 simple loader recognizes only fast memory and stops parsing
+# at the first slow segment, leaving incorrect flash MMU offsets after elf2image.
+loader = args.zephyr / "soc/espressif/common/loader.c"
+old_rtc = "#define IS_RTC(addr) (addr >= SOC_RTC_DRAM_LOW && addr < SOC_RTC_DRAM_HIGH)"
+new_rtc = """#if defined(CONFIG_SOC_SERIES_ESP32S3)
+#define IS_RTC(addr) ((addr >= SOC_RTC_DRAM_LOW && addr < SOC_RTC_DRAM_HIGH) || \\
+                      (addr >= SOC_RTC_DATA_LOW && addr < SOC_RTC_DATA_HIGH))
+#else
+#define IS_RTC(addr) (addr >= SOC_RTC_DRAM_LOW && addr < SOC_RTC_DRAM_HIGH)
+#endif"""
+contents = loader.read_text()
+restored = contents.replace(new_rtc, old_rtc)
+if hashlib.sha256(restored.encode()).hexdigest() not in {
+    "56cfa3cfbda650719aab001b8b349c9d87ce71a1d51595c9c3b29360f0b901be",
+    "455a30566cd84d2d9b478bdefb0870a8195af87dff577ff1c581ed2ac751d260",
+}:
+    raise SystemExit("Unrecognized Zephyr simple loader")
+loader.write_text(restored.replace(old_rtc, new_rtc))
+print("ESP32-S3 simple loader RTC slow/fast segment recognition prepared")

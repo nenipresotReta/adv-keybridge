@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <stdbool.h>
 enum adv_sd_log_state { ADV_SD_STARTING, ADV_SD_ACTIVE, ADV_SD_ERROR };
 struct adv_sd_log_status {
     enum adv_sd_log_state state;
@@ -7,6 +8,8 @@ struct adv_sd_log_status {
     uint32_t dropped, bytes, file;
 };
 /* Nonblocking status only. The logger never controls USB, input or BLE. */
+void adv_sd_log_sleep_hold(bool hold);
+int adv_sd_log_sleep_status(void);
 void adv_sd_log_get_status(struct adv_sd_log_status *status);
 
 #define ADV_LOG_CHUNK 128

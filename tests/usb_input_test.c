@@ -32,6 +32,7 @@ static void send(unsigned source,unsigned key,unsigned consumer) {
     int error=adv_usb_submit_values(source,ADV_HID_KEYBOARD|ADV_HID_CONSUMER,&v);
     if(error)fault=error;
 }
+void adv_power_input(unsigned source,bool held) { (void)source;(void)held; }
 int main(void) {
     adv_usb_input_reset(true);pump();
     send(1,4,0xe9);pump();assert(down[4] && media[0xe9]);

@@ -24,12 +24,24 @@ struct log_chunk { uint16_t length; uint8_t data[CHUNK_BYTES]; };
 K_MSGQ_DEFINE(log_chunks, sizeof(struct log_chunk), 32, 4);
 static atomic_t state, error_code, dropped_bytes, written_bytes, file_number;
 static atomic_t accepting = 1;
+static atomic_t sleep_hold, sleep_ack, storage_stopped;
 static FATFS fatfs;
 static struct fs_mount_t mount = {.type=FS_FATFS, .fs_data=&fatfs,
     .mnt_point="/SD:", .flags=FS_MOUNT_FLAG_NO_FORMAT | FS_MOUNT_FLAG_USE_DISK_ACCESS};
 static struct fs_file_t file;
 static bool opened, mounted, dirty;
 K_SEM_DEFINE(sd_wake,0,1);
+void adv_sd_log_sleep_hold(bool hold) {
+    atomic_set(&sleep_hold,hold);
+    if(hold)atomic_clear(&accepting);
+    k_sem_give(&sd_wake);
+}
+int adv_sd_log_sleep_status(void) {
+    if(atomic_get(&storage_stopped)) {
+        int ack=atomic_get(&sleep_ack);return ack<0?ack:1;
+    }
+    return atomic_get(&sleep_ack);
+}
 static uint32_t file_bytes;
 static unsigned next_file;
 struct log_request { uint32_t id, file, offset; enum adv_log_operation op; };
@@ -193,6 +205,7 @@ static void stop_storage(int error) {
     /* Best-effort cleanup stays on this thread, including a removed card. */
     if (opened) { (void)fs_close(&file);opened=false; }
     if (mounted) { (void)fs_unmount(&mount);mounted=false; }
+    atomic_set(&storage_stopped,1);
     LOG_ERR("SD log stopped: %d; other services continue",error);
 }
 static int sync_if_dirty(void) {
@@ -214,6 +227,15 @@ static void sd_thread(void *a, void *b, void *c) {
     int64_t next_sync=k_uptime_get()+2000;
     uint32_t reported_dropped=0;
     while (!err) {
+        if(atomic_get(&sleep_hold) && !k_msgq_num_used_get(&log_chunks)) {
+            err=adv_history_storage_flush();
+            if(!err)err=sync_if_dirty();
+            atomic_set(&sleep_ack,err?err:1);
+            while(!err && atomic_get(&sleep_hold))k_sem_take(&sd_wake,K_SECONDS(1));
+            if(!err) { atomic_clear(&sleep_ack);atomic_set(&accepting,1); }
+            continue;
+        }
+        if(!atomic_get(&sleep_hold))atomic_set(&accepting,1);
         adv_history_storage_tick();
         service_read_request();
         struct log_chunk chunk;

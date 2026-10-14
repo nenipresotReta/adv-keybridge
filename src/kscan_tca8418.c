@@ -9,6 +9,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/atomic.h>
 #include "adv_keyboard.h"
+#include "adv_power.h"
 
 LOG_MODULE_REGISTER(adv_keyboard, LOG_LEVEL_INF);
 enum { CFG = 0x01, INT_STAT = 0x02, EVENT_COUNT = 0x03, EVENT_A = 0x04,
@@ -34,6 +35,7 @@ static void release_all(struct adv_data *d) {
             d->callback(d->dev, n / 14, n % 14, false);
     }
     d->held = 0;
+    adv_power_input(0,false);
 }
 static int read_reg(const struct adv_config *c, uint8_t reg, uint8_t *value) {
     return i2c_reg_read_byte_dt(&c->bus, reg, value);
@@ -73,6 +75,7 @@ static void scan(struct k_work *work) {
         uint64_t bit = UINT64_C(1) << (row * 14 + col);
         if (!!(d->held & bit) == pressed) continue;
         if (pressed) d->held |= bit; else d->held &= ~bit;
+        adv_power_input(0,d->held!=0);
         if (d->callback) d->callback(d->dev, row, col, pressed);
     }
     err = i2c_reg_write_byte_dt(&c->bus, INT_STAT, status & 0x0f);

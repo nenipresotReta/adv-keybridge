@@ -114,7 +114,7 @@ void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t 
         else snprintf(sd_label,sizeof(sd_label),"DISPLAY / SD LOG %s",
             m->sd_log.state==ADV_SD_ACTIVE?"ON":"STARTING");
         text(&c,10,28,sd_label,1,m->sd_log.state==ADV_SD_ERROR?RED:MUTED);
-        const char *rows[]={"BRIGHTNESS","SLEEP TIME","SCREEN OFF","SLOTS","BATTERY","BACK"};
+        const char *rows[]={"BRIGHTNESS","SLEEP TIME","SCREEN OFF","SLOTS","BATTERY","DEEP SLEEP","BACK"};
         for(unsigned row=0;row<3;row++) {
             unsigned n=(m->screen.selected+ADV_SETTINGS_ROWS+row-1)%ADV_SETTINGS_ROWS;
             int top=42+row*20;
@@ -138,6 +138,11 @@ void adv_render_band(const struct adv_ui_model *m,uint16_t y,uint16_t h,uint8_t 
             if(n==1) {
                 static const char *labels[]={"10S","30S","1MIN","5MIN","10MIN","30MIN","60MIN","INF"};
                 snprintf(value,sizeof(value),"%s",labels[m->screen.sleep_index<8?m->screen.sleep_index:2]);
+            }
+            if(n==5) {
+                static const char *labels[]={"5MIN","10MIN","30MIN","60MIN","OFF"};
+                snprintf(value,sizeof(value),"%s",labels[m->screen.deep_sleep_index<5?m->screen.deep_sleep_index:2]);
+                for(unsigned t=0;t<5;t++)rect(&c,112+t*10,top+7,8,5,t<=m->screen.deep_sleep_index?ACCENT:BG);
             }
             if(n<=1) {
                 unsigned level=n==0?(m->screen.brightness<5?0:m->screen.brightness<10?1:m->screen.brightness/10+1):m->screen.sleep_index;

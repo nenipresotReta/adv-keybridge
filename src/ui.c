@@ -17,6 +17,7 @@
 #include <zmk/events/position_state_changed.h>
 #include <zmk/events/keycode_state_changed.h>
 #include "adv_ui.h"
+#include "adv_power.h"
 #include "adv_keyboard.h"
 
 LOG_MODULE_REGISTER(adv_ui, LOG_LEVEL_INF);
@@ -59,7 +60,7 @@ static int paint(const struct adv_ui_model *m) {
        m->battery.drain_state==previous.battery.drain_state &&
        m->battery.drain_tenths_per_hour==previous.battery.drain_tenths_per_hour &&
        m->screen.page==previous.screen.page && m->screen.selected==previous.screen.selected &&
-       m->screen.brightness==previous.screen.brightness && m->screen.profile_cursor==previous.screen.profile_cursor && m->screen.sleep_index==previous.screen.sleep_index && m->screen_error==previous.screen_error &&
+       m->screen.brightness==previous.screen.brightness && m->screen.profile_cursor==previous.screen.profile_cursor && m->screen.deep_sleep_index==previous.screen.deep_sleep_index && m->screen.sleep_index==previous.screen.sleep_index && m->screen_error==previous.screen_error &&
        m->sd_log.state==previous.sd_log.state && m->sd_log.error==previous.sd_log.error &&
        m->sd_log.dropped==previous.sd_log.dropped &&
        m->previous_usb_stage==previous.previous_usb_stage)return 0;
@@ -116,6 +117,7 @@ static void button(int64_t now) {
     if(value<0)return;
     bool down=value>0;
     if(down)adv_screen_activity();
+    if(adv_power_consume_wake_button(down))return;
     if(down && !menu_held){
         pressed_since=now;long_action=false;
         struct adv_screen_state screen; int error;

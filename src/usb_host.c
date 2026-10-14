@@ -7,6 +7,7 @@
 #include <zephyr/sys/atomic.h>
 #include <zephyr/logging/log.h>
 #include "adv_usb.h"
+#include "adv_power.h"
 #include "adv_usb_dwc2.h"
 #include "usb/board.h"
 #include "usb/diagnostics.h"
@@ -15,11 +16,16 @@
 #include "usb/transport.h"
 
 LOG_MODULE_REGISTER(adv_usb, LOG_LEVEL_INF);
-static atomic_t requested, state, reports, media_reports, fault;
+static atomic_t requested, state, reports, media_reports, fault, sleep_hold, sleep_ready;
 static struct usb_session session;
 K_SEM_DEFINE(host_wake,0,1);
 static void wake_owner(void) { k_sem_give(&host_wake); }
 
+bool adv_usb_requested(void) { return atomic_get(&requested)!=0; }
+void adv_usb_sleep_hold(bool hold) {
+    atomic_clear(&sleep_ready);atomic_set(&sleep_hold,hold);wake_owner();
+}
+bool adv_usb_sleep_ready(void) { return atomic_get(&sleep_ready)!=0; }
 void adv_usb_request_toggle(void) { atomic_xor(&requested, 1); wake_owner(); }
 void adv_usb_get_status(struct adv_usb_status *status) {
     status->error = atomic_get(&fault);
@@ -101,7 +107,9 @@ static void host_thread(void *a, void *b, void *c) {
     for (;;) {
         int error = atomic_get(&fault);
         if (error && session.phase == USB_SESSION_RUNNING) atomic_clear(&requested);
-        usb_session_step(&session, atomic_get(&requested), error, &ops);
+        usb_session_step(&session, atomic_get(&requested) && !atomic_get(&sleep_hold), error, &ops);
+        atomic_set(&sleep_ready,atomic_get(&sleep_hold) &&
+                   (session.phase==USB_SESSION_OFF || session.phase==USB_SESSION_FAILED));
         if (session.phase == USB_SESSION_FAILED) atomic_clear(&requested);
         if (k_uptime_get() >= next_diagnostics) {
             log_diagnostics();
@@ -121,7 +129,8 @@ static void host_thread(void *a, void *b, void *c) {
 K_THREAD_STACK_DEFINE(host_stack, 4096);
 static struct k_thread host_task;
 static int start_usb(void) {
-    LOG_INF("Previous USB stage: %u; Host defaults off", usb_diag_previous());
+    atomic_set(&requested,adv_power_restore_host());
+    LOG_INF("Previous USB stage: %u; Host requested=%ld", usb_diag_previous(),(long)atomic_get(&requested));
     k_thread_create(&host_task, host_stack, K_THREAD_STACK_SIZEOF(host_stack),
                     host_thread, NULL, NULL, NULL, 7, 0, K_MSEC(2000));
     k_thread_name_set(&host_task, "usb_host");

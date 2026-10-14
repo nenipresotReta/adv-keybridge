@@ -8,6 +8,8 @@ const struct device test_lcd={0};
 static struct k_work_q lowprio;
 static bool active, ready=true, blank;
 static int pwm_error, blank_error, save_error;
+void adv_power_activity(void) {}
+void adv_power_set_timeout(uint32_t ms) { (void)ms; }
 static unsigned pulse, scheduled, writes, persisted, persisted_sleep;
 bool device_is_ready(const struct device *d) { (void)d;return ready; }
 bool pwm_is_ready_dt(const struct pwm_dt_spec *p) { (void)p;return ready; }
@@ -28,6 +30,7 @@ int k_work_reschedule_for_queue(struct k_work_q *q,struct k_work_delayable *w,in
 int settings_save_one(const char *name,const void *p,size_t n) {
     assert(n==1);
     if(!strcmp(name,"adv_screen/sleep"))persisted_sleep=*(const uint8_t *)p;
+    else if(!strcmp(name,"adv_screen/deep")) { assert(*(const uint8_t *)p<5); }
     else { assert(!strcmp(name,"adv_screen/brightness"));persisted=*(const uint8_t *)p;writes++; }
     return save_error;
 }
@@ -67,7 +70,7 @@ int main(void) {
     assert(state.asleep && blank && pulse==0 && !active && state.page==ADV_PAGE_KEYBOARD);
     assert(adv_screen_menu_action(&state)==ADV_SCREEN_WAKE);
     action(ADV_SCREEN_WAKE);assert(!state.asleep && !blank && pulse==960784 && !active);
-    action(ADV_SCREEN_OPEN);action(ADV_SCREEN_PREVIOUS);assert(state.selected==5);
+    action(ADV_SCREEN_OPEN);action(ADV_SCREEN_PREVIOUS);assert(state.selected==6);
     action(ADV_SCREEN_SELECT);assert(!active && state.page==ADV_PAGE_KEYBOARD);
     action(ADV_SCREEN_OPEN);action(ADV_SCREEN_BACK);assert(!active);
     assert(!adv_screen_request(ADV_SCREEN_WAKE));
@@ -137,5 +140,20 @@ int main(void) {
     for(unsigned i=0;i<10;i++)action(ADV_SCREEN_BRIGHTEN);
     assert(state.chart_scale==6 && active);
     action(ADV_SCREEN_BACK);assert(state.page==ADV_PAGE_SETTINGS && active);
+    action(ADV_SCREEN_BACK);action(ADV_SCREEN_OPEN);
+    for(unsigned i=0;i<5;i++)action(ADV_SCREEN_NEXT);
+    assert(state.selected==5 && state.deep_sleep_index==2);
+    for(unsigned i=0;i<8;i++)action(ADV_SCREEN_DIM);
+    assert(state.deep_sleep_index==0 && adv_deep_sleep_ms(0)==300000);
+    for(unsigned i=0;i<8;i++)action(ADV_SCREEN_BRIGHTEN);
+    assert(state.deep_sleep_index==4 && adv_deep_sleep_ms(4)==0);
+    restored=5;assert(load_brightness("deep",1,read_value,&restored)==-EINVAL);
+    restored=1;assert(!load_brightness("deep",1,read_value,&restored));
+    adv_screen_tick();assert(state.deep_sleep_index==1);
+    action(ADV_SCREEN_BACK);action(ADV_SCREEN_WAKE);
+    adv_screen_sleep_hold(true);adv_screen_tick();
+    assert(adv_screen_sleep_status()==1 && state.asleep && blank && !pulse);
+    adv_screen_sleep_hold(false);adv_screen_tick();
+    assert(!adv_screen_sleep_status() && !state.asleep && !blank);
     puts("PASS: production settings isolation, PWM limits/off/wake, persistence, bounded queue and hardware failure rollback");
 }

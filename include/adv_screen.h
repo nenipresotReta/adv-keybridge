@@ -7,12 +7,16 @@
 enum adv_page { ADV_PAGE_KEYBOARD, ADV_PAGE_SETTINGS, ADV_PAGE_BATTERY };
 struct adv_screen_state {
     enum adv_page page;
-    uint8_t selected, brightness, sleep_index, profile_cursor, chart_scale;
+    uint8_t selected, brightness, sleep_index, deep_sleep_index, profile_cursor, chart_scale;
     bool asleep;
 };
-#define ADV_SCREEN_DEFAULT { .page=ADV_PAGE_KEYBOARD, .brightness=100, .sleep_index=2, .chart_scale=2 }
+#define ADV_SCREEN_DEFAULT { .page=ADV_PAGE_KEYBOARD, .brightness=100, .sleep_index=2, .deep_sleep_index=2, .chart_scale=2 }
 
 uint32_t adv_screen_sleep_ms(unsigned index);
+uint32_t adv_deep_sleep_ms(unsigned index);
+/* UI owner acknowledges blanking; callers never touch display hardware. */
+void adv_screen_sleep_hold(bool hold);
+int adv_screen_sleep_status(void);
 
 /* Hardware-independent settings page transitions. */
 void adv_screen_step(struct adv_screen_state *state, unsigned action);

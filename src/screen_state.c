@@ -6,6 +6,11 @@ uint32_t adv_screen_sleep_ms(unsigned index) {
     return index<8?delays[index]:60000;
 }
 
+uint32_t adv_deep_sleep_ms(unsigned index) {
+    static const uint32_t delays[]={300000,600000,1800000,3600000,0};
+    return index<5?delays[index]:1800000;
+}
+
 int adv_screen_menu_action(const struct adv_screen_state *s) {
     if(s->asleep)return ADV_SCREEN_WAKE;
     if(s->page!=ADV_PAGE_KEYBOARD)return ADV_SCREEN_BACK;
@@ -28,17 +33,19 @@ void adv_screen_step(struct adv_screen_state *s, unsigned action) {
         case ADV_SCREEN_DIM:
             if (!s->selected) s->brightness=s->brightness>10?s->brightness-10:s->brightness>5?5:1;
             if (s->selected==3) s->profile_cursor=(s->profile_cursor+4)%5;
+            if (s->selected==5 && s->deep_sleep_index>0) s->deep_sleep_index--;
             if (s->selected==1 && s->sleep_index>0) s->sleep_index--;
             break;
         case ADV_SCREEN_BRIGHTEN:
             if (!s->selected && s->brightness<100) s->brightness=s->brightness<5?5:s->brightness<10?10:s->brightness+10;
             if (s->selected==3) s->profile_cursor=(s->profile_cursor+1)%5;
+            if (s->selected==5 && s->deep_sleep_index<4) s->deep_sleep_index++;
             if (s->selected==1 && s->sleep_index<7) s->sleep_index++;
             break;
         case ADV_SCREEN_SELECT:
             if (s->selected==2) { s->asleep=true; s->page=ADV_PAGE_KEYBOARD; }
             else if (s->selected==4) s->page=ADV_PAGE_BATTERY;
-            else if (s->selected==5) s->page=ADV_PAGE_KEYBOARD;
+            else if (s->selected==6) s->page=ADV_PAGE_KEYBOARD;
             break;
         case ADV_SCREEN_BACK: s->page=ADV_PAGE_KEYBOARD; break;
         default: break;

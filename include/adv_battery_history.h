@@ -16,4 +16,5 @@ void adv_history_snapshot(unsigned scale, struct adv_battery_chart *out);
 /* Existing SD owner only; RAM sampling remains available without a card. */
 void adv_history_storage_start(int available);
 void adv_history_storage_tick(void);
+int adv_history_storage_flush(void);
 void adv_history_storage_stop(int error);

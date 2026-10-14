@@ -155,6 +155,17 @@ void adv_history_storage_tick(void) {
     k_mutex_lock(&history_lock,K_FOREVER);storage_error=err;k_mutex_unlock(&history_lock);
 }
 
+int adv_history_storage_flush(void) {
+    for(unsigned i=0;i<16 && k_msgq_num_used_get(&history_writes);i++) {
+        adv_history_storage_tick();
+        k_mutex_lock(&history_lock,K_FOREVER);
+        int err=storage_error;
+        k_mutex_unlock(&history_lock);
+        if(err)return err;
+    }
+    return k_msgq_num_used_get(&history_writes)?-EBUSY:0;
+}
+
 void adv_history_storage_stop(int err) {
     k_mutex_lock(&history_lock,K_FOREVER);storage=false;storage_error=err;k_mutex_unlock(&history_lock);
     k_msgq_purge(&history_writes);

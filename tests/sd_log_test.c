@@ -48,6 +48,7 @@ static void reset(void) {
  k_msgq_purge(&log_requests);k_msgq_purge(&log_replies);
  mount_error=stat_error=open_error=sync_error=0;existing=fs_calls=opens=closes=syncs=0;
  partial=opened=mounted=false;next_file=file_bytes=0;
+ sleep_ack=sleep_hold=storage_stopped=0;
  state=error_code=dropped_bytes=written_bytes=file_number=0;accepting=1;k_msgq_purge(&log_chunks);
 }
 int main(void) {
@@ -88,9 +89,16 @@ int main(void) {
  dirty=true;sync_error=-EIO;assert(sync_if_dirty()==-EIO && dirty);
  sync_error=0;assert(!sync_if_dirty() && !dirty);
  assert(!k_sem_take(&sd_wake,K_NO_WAIT)); /* Enqueue/request signalled worker. */
+ reset();atomic_set(&state,ADV_SD_ACTIVE);
+ adv_sd_log_sleep_hold(true);assert(!accepting && !adv_sd_log_sleep_status());
+ atomic_set(&state,ADV_SD_ERROR);assert(!adv_sd_log_sleep_status()); /* Cleanup is still running. */
+ atomic_set(&storage_stopped,1);assert(adv_sd_log_sleep_status()==1);
+ atomic_set(&sleep_ack,-EIO);assert(adv_sd_log_sleep_status()==-EIO);
+ adv_sd_log_sleep_hold(false);assert(!sleep_hold);
  puts("PASS: production SD mailbox never calls FS; bounded overflow; no format/overwrite; mount/stat/open/full/partial/sync errors; rotation");
 }
 
 void adv_history_storage_start(int err) { (void)err; }
 void adv_history_storage_tick(void) {}
+int adv_history_storage_flush(void) { return 0; }
 void adv_history_storage_stop(int err) { (void)err; }

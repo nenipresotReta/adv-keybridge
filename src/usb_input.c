@@ -5,6 +5,7 @@
 #include <zmk/events/keycode_state_changed.h>
 #include "adv_usb_keys.h"
 #include "adv_hid.h"
+#include "adv_power.h"
 #include "usb/input.h"
 #include <errno.h>
 
@@ -57,6 +58,10 @@ static void apply(const struct usb_frame *input) {
             }
             memcpy(before,after,sizeof(consumer_held[0]));
         }
+        bool pressed=false;
+        for(unsigned i=0;i<ADV_KEY_BYTES;i++)pressed|=old[i]!=0;
+        for(unsigned i=0;i<ADV_CONSUMER_KEYS;i++)pressed|=consumer_held[frame.source-1][i]!=0;
+        adv_power_input(frame.source,pressed);
 }
 static void drain(struct k_work *work) {
     ARG_UNUSED(work);

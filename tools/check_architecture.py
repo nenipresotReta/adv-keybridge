@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parent.parent
 STANDARD = {"errno.h", "stdbool.h", "stdint.h", "stddef.h", "stdio.h", "string.h"}
 KERNEL = {"zephyr/kernel.h", "zephyr/init.h", "zephyr/sys/atomic.h", "zephyr/logging/log.h"}
 ALLOWED = {
+    "include/adv_power.h": set(),
+    "src/power_state.c": {"adv_power.h"},
+    "src/power.c": KERNEL | {"esp_attr.h", "esp_sleep.h", "driver/rtc_io.h", "zephyr/drivers/gpio.h", "zephyr/sys/poweroff.h", "adv_power.h", "adv_screen.h", "adv_usb.h", "adv_sd_log.h"},
     "include/adv_pages.h": set(),
     "src/pages_state.c": {"adv_pages.h"},
     "src/pages.c": KERNEL | {"adv_pages.h", "adv_screen.h", "zephyr/settings/settings.h", "zmk/ble.h", "zmk/workqueue.h"},
@@ -20,7 +23,7 @@ ALLOWED = {
         "zephyr/logging/log_output.h", "adv_sd_log.h", "adv_battery_history.h"},
     "include/adv_sd_log.h": set(),
     "src/log_console.c": {"zephyr/shell/shell.h", "adv_sd_log.h"},
-    "src/usb_host.c": KERNEL | {"adv_usb.h", "adv_usb_dwc2.h", "usb/board.h",
+    "src/usb_host.c": KERNEL | {"adv_usb.h", "adv_power.h", "adv_usb_dwc2.h", "usb/board.h",
         "usb/diagnostics.h", "usb/input.h", "usb/session.h", "usb/transport.h"},
     "src/usb/board.c": {"zephyr/init.h", "esp_rom_gpio.h", "soc/gpio_sig_map.h",
         "soc/gpio_pins.h", "soc/rtc_cntl_struct.h", "hal/usb_wrap_ll.h", "tusb.h",
@@ -30,7 +33,7 @@ ALLOWED = {
     "src/usb/transport.c": KERNEL | {"tusb.h", "adv_usb_keys.h", "adv_usb_dwc2.h",
         "transport.h", "board.h", "diagnostics.h"},
     "src/usb_input.c": {"zephyr/kernel.h", "zephyr/sys/atomic.h",
-        "zmk/events/keycode_state_changed.h", "adv_usb_keys.h", "adv_hid.h", "usb/input.h"},
+        "zmk/events/keycode_state_changed.h", "adv_usb_keys.h", "adv_hid.h", "adv_power.h", "usb/input.h"},
     "src/hid_report.c": {"adv_hid.h"},
     "src/ui_render.c": {"adv_ui.h"},
     "src/battery.c": KERNEL | {"zephyr/drivers/adc.h", "adv_battery.h", "adv_battery_trend.h", "adv_battery_history.h"},
@@ -41,7 +44,7 @@ ALLOWED = {
     "src/battery_trend.c": {"adv_battery_trend.h"},
     "include/adv_screen.h": {"dt-bindings/adv_screen.h"},
     "src/screen_state.c": {"adv_screen.h"},
-    "src/screen.c": KERNEL | {"adv_screen.h", "adv_pages.h", "zephyr/drivers/display.h",
+    "src/screen.c": KERNEL | {"adv_screen.h", "adv_pages.h", "adv_power.h", "zephyr/drivers/display.h",
         "zephyr/drivers/pwm.h", "zephyr/settings/settings.h", "zmk/keymap.h", "zmk/workqueue.h"},
     "src/behavior_screen.c": {"drivers/behavior.h", "zmk/behavior.h", "adv_screen.h"},
     "include/adv_usb.h": set(),
